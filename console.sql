@@ -105,6 +105,7 @@ select name, Executing, Creator from task where Creator!='SofiaPet' and Executin
 select name, Executing, "starting task date" from task where Executing='ArtyomKas01' and ("starting task date" between '2016-01-01' AND '2016-01-03');
 --5
 select name,Creator from task where Executing='SofiaPet' and Creator in (select Login from persons where Department in ('администрация', 'бухгалтерия', 'производство'));
+select task.name,Creator from task, persons where Executing='SofiaPet' and Creator=login and Department in ('администрация', 'бухгалтерия', 'производство');
 --6.2
 select name, Executing from task where Executing is null;
 --6.3
@@ -122,3 +123,107 @@ select * from persons where
                         and Surname not like '%а'
                         and login like 'b%'
                         and login like '%r%';
+---------------------------------------------------------------------------------#2----------------------------------------------------------------------------
+--2.1
+select Persons.Name, Persons.Surname, avg(Priority)
+from persons, task
+where Persons.Login=Task.Executing
+group by(Persons.Name, Persons.Surname)----------------------------------зачем нужно группировать?
+order by avg(Priority) desc limit 3;
+--2.2
+--changing--
+select taskID, Creator,name, "starting task date" from task;
+update task set "starting task date"='2015-01-01' where taskID in (1,3,4);
+--update task set executing='makentoshAl',"starting task date"='2015-01-01' where taskID=5;
+update task set "starting task date"='2015-01-03' where taskID=11;
+update task set "starting task date"='2015-12-31' where taskID=13;
+------------
+select concat(count(taskID),' - ', extract(MONTH from task."starting task date"),' - ',task.Creator) as tasks,
+       persons.surname, persons.name
+from Persons, task
+where Persons.Login=Task.Creator
+  and extract(YEAR from task."starting task date")=2015
+  and task."starting task date" is not null
+group by extract(MONTH from "starting task date"), task.Creator, persons.surname, persons.name;
+--2.3
+--changes--
+-----------
+select * from task, persons;
+--2.4
+--changes--
+select Creator, Executing, taskID from task;
+update task set executing='Ivas9' where taskID=14;
+-----------
+select distinct Creator, Executing from task  where Executing<Creator
+union
+select distinct Executing, Creator from task  where Executing>Creator
+union
+select distinct Creator, Executing from task  where Executing=Creator
+order by Creator;---------------------------------------------------как убрать комбинации, которые тут будут и что такое лексикографическая проверка
+--check--
+select distinct Creator, Executing from task  where Executing<Creator;
+select distinct Executing, Creator from task  where Executing>Creator;
+select distinct Creator, Executing from task  where Executing=Creator;
+---------
+--2.5
+select login, length(login)
+from persons
+order by length(login) desc
+limit 1;
+--2.6
+drop table if exists char_table, varchar_table;
+create table char_table(
+    cStr char(32)
+);
+
+create table varchar_table(
+    vStr varchar(32)
+);
+insert into char_table values ('some string');
+insert into varchar_table values ('some string');
+
+select pg_column_size(cStr) "char", pg_column_size(vStr) "varchar"
+from char_table,
+     varchar_table;
+--2.7
+select persons.name, persons.Surname, max(task.Priority), task.Name as "task name"
+from Task, persons
+where task.Executing=Persons.Login
+  and Priority in
+      (select max(task.Priority)
+       from task,
+            persons
+       where task.Executing = Persons.Login
+      group by persons.name, persons.Surname)
+group by persons.name, persons.Surname, task.Name;
+------
+-- select persons.name, persons.Surname, max(task.Priority), task.Name as "task name"
+-- from Task, persons
+-- where task.Executing=Persons.Login
+-- group by persons.name, persons.Surname
+-- having task.Name.max(task.Name);
+
+--2.8
+---changes---
+select name, "Required time" from task;
+update task set "Required time"=55 where name in ('Watch DB','Write the article', 'Remake product', 'Show presentation', 'Create DB');
+update task set "Required time"=27 where name in ('Do Something', 'Create host-server','Read man(documentation)');
+update task set "Required time"=44 where name in('Call to mariaDB','Build home', 'Create host-server');
+update task set "Required time"=13  where name in('Solve problem', 'Calculate discriminant', 'reload system');
+-------------
+select Persons.Name, Persons.Surname, sum(task."Required time")
+from task, persons
+where task.Executing=Persons.Login
+  and task."Required time">(select avg("Required time") from task)
+  and task.Status in ( 'Новая', 'Переоткрыта', 'Выполняется')
+group by Persons.Name, Persons.Surname, Task."Required time";
+--2.9
+with tr (taskID, executing)
+as
+(
+    select taskID from task
+    UNION ALL
+    select taskID from task
+)
+select * from task
+
