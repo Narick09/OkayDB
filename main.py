@@ -3,7 +3,7 @@ import actions as ac
 
 def Greeting():
 	print("\n\n\n")
-	print("Estate agency Income")
+	print("Estate agency")
 	print("--------------------")
 
 def ClosingProgram():
