@@ -8,7 +8,6 @@ def Greeting():
 
 def ClosingProgram():
 	print("Закрытие")
-	#some closing actions mb
 	print("Программа закрыта")
 
 def ChooseAction():
