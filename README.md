@@ -18,4 +18,6 @@
 Также необходима БД PostgreSQL. Для администратирования можно использовать программу pgAdmin. 
 Для разработки на питоне файлов использовалась IDE PyCharm Community Edition. 
 
+
+UML-схема:
 https://drive.google.com/file/d/11Fg8HQGvTi9Tka2pWtTVkAX2UJFCsaZJ/view?usp=sharing
