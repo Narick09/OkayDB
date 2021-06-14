@@ -71,9 +71,9 @@ create table Buildings(
     district varchar,--район
     street	varchar not null,--улица
     floors_amount int,--число этажей
-    repair_presence	bool,--наличие ремонта
-    building_year date,--год постройки
-    wall_material varchar,--материал стен--добавить чек-ограничения
+    --repair_presence	bool,--наличие ремонта
+    --building_year int check (building_year between 1950 and 2021),--год постройки
+    --wall_material varchar,--материал стен--добавить чек-ограничения
     primary key (buildingId),
     foreign key (district, street) references Street_list(district, street)
 );
@@ -85,15 +85,10 @@ create table Object(
     ownerId	int unique,--идентификатор владельца данноого объекта
     obj_type varchar check (obj_type in ('Комната', 'Квартира')),--тип объекта
     price int,--цена
-    floor_plan varchar check (floor_plan in ('Секционка', 'Улучшенной планировки', 'Коммунальная', 'Хрущевка', 'Студия', 'Типовая', 'Элитная', 'Сталинка', 'Ленинка', 'Брежневка')),
-    --планировка
-    living_area	int,--жил площадь
-    total_area int,--вся площадь
+    area	int,--жил площадь
     floor int,--этаж
     amonut_of_rooms	int,--число комнат
     object_num int,--номер объекта (в доме)
-    furniture_presence bool,--наличие мебели
-    repair_presence bool,--наличие ремонта
     additional_description varchar(10000),--доп информация
     primary key (objectId),
     foreign key (agentId) references Agents(agentId),
@@ -102,7 +97,7 @@ create table Object(
 );
 
 create table Deal(
-    dealId int,--идентификатор сделки
+    dealId serial,--идентификатор сделки
     agentId	int,--идентификатор агента, проводящего сделку
     objectId int,--идентификатор объекта сделки
     buyerId int,--идентификатор покупателя
@@ -243,122 +238,199 @@ insert into Street_list VALUES ('Первомайский', 'Шмидта'),
                                ('Кировский', 'Бронная'),
                                ('Ленинский', 'Степная');
 
-insert into Buildings (build_number, district, street, floors_amount, repair_presence, building_year, wall_material) values
-(35, 'Первомайский', 'Шмидта',5, true, '02-02-2000', 'Кирпич'),
-(14, 'Кировский', 'Бронная', 5, true, '02-02-2013', 'Кирпич'),
-(18, 'Ленинский', 'Степная', 5, true, '02-02-2015', 'Кирпич');
+insert into Buildings (build_number, district, street, floors_amount) values
+(35, 'Первомайский', 'Шмидта',5),
+(14, 'Кировский', 'Бронная', 5),
+(18, 'Ленинский', 'Степная', 5);
 
 insert into Object (agentId,ownerId, buildingId,  obj_type, price,
-                    floor_plan, living_area, total_area, floor,
-                    amonut_of_rooms, object_num, furniture_presence, repair_presence, additional_description)
-VALUES (6, 1, 1, 'Комната', 900, 'Коммунальная', 15, 25, 3, 1, 324, true, true, null),
-                                             (8,2, 1, 'Квартира', 3500, 'Улучшенной планировки', 47, 54, 9, 3, 34, false, true, null),
-                                             (8,3,2, 'Квартира', 2900, 'Сталинка',  25, 40, 3, 2, 313, true, true, null),
-                                             (9,4,3, 'Квартира', 2500, 'Секционка', 35, 45, 4, 2, 424, true, true, null),
-                                             (10, 5,3, 'Квартира', 2350, 'Студия', 30, 40, 1, 3, 122, true, true, null);
+                     area, floor,
+                    amonut_of_rooms, object_num, additional_description)
+VALUES (6, 1, 1, 'Комната', 900, 15, 3, 1, 324, null),
+                                             (8,2, 1, 'Квартира', 3500,  47,  9, 3, 34, null),
+                                             (8,3,2, 'Квартира', 2900,   25,  3, 2, 313, null),
+                                             (9,4,3, 'Квартира', 2500, 35,  4, 2, 424, null),
+                                             (10, 5,3, 'Квартира', 2350,  40, 1, 3, 122, null);
 ----------------------------------------------------------------------------------------
 -----------------------------------functions--------------------------------------------
------------------------------------boolean----------------------------------------------
-/*
-drop function if exists isExist_street(street varchar);
-create or replace function isExist_street(street varchar) returns bool as
+-----------------------------------getters----------------------------------------------
+/*drop function if exists getID_people(Surname_ varchar, Name_ varchar, Patronymic_ varchar);
+create or replace function getID_people(Surname_ varchar, Name_ varchar, Patronymic_ varchar)
+returns int as
     $$
+    declare
+    id int;
         BEGIN
-            if street in (select Street_list.street from Street_list) then
-                return true;
+            id = 0;
+            id = (select personId from people where Surname_ = surname and Name_= Name and  Patronymic_ = Patronymic);
+            return id;
+        end
+    $$ LANGUAGE plpgsql;*/
+-----------------------------------adding--------------------------------------------
+drop function if exists add_people(Surname_ varchar, Name_ varchar, Patronymic_ varchar, telephone_number_ varchar, passport_data_ varchar);
+create or replace function add_people(Surname_ varchar, Name_ varchar, Patronymic_ varchar,  telephone_number_ varchar, passport_data_ varchar)
+returns int as
+    $$
+    declare
+    id int;
+        BEGIN
+            id = 0;
+            id = (select personId from people where Surname_ = surname and Name_= Name and  Patronymic_ = Patronymic);
+            if (id != 0) then
+                if (passport_data_ is not null) then
+                    update Personal_data set pasport_number=passport_data_ where personId=id;
+                end if;
+                if (telephone_number_ is not null) then
+                    update Telephone_book set telephone_number=telephone_number_ where personId=id;
+                end if;
             else
-                return false;
+                insert into People (surname, name, patronymic) values (Surname_, Name_, Patronymic_);
+                id = (select personId from people where
+                Surname_=Surname and Name_ = Name and Patronymic_=Patronymic);
+                insert into Personal_data values (id, passport_data_);
+                insert into telephone_book values (id, telephone_number_);
             end if;
-        end;
-    $$ Language plpgsql;
-
-drop function if exists isExist_district(district varchar);
-create or replace function isExist_district(district varchar) returns bool as
-    $$
-        BEGIN
-            if district in (select Street_list.district from Street_list) then
-                return true;
-            else
-                return false;
-            end if;
-        end;
-    $$ Language plpgsql;
---drop function isExist_address(district varchar, street varchar, build_num int);
-
-drop function if exists isExist_address( district varchar,street varchar, build_num int);
-create or replace function isExist_address( district varchar,street varchar, build_num int) returns bool as
-    $$
-        BEGIN
-            if (street, district) in (select Street_list.street,Street_list.district from Street_list) and
-                build_num in (select build_number from Buildings) then
-                return true;
-            else
-                return false;
-            end if;
-        end;
-    $$ Language plpgsql;
-*/
-select * from Object where objectId not in (select Deal.objectId from Deal);
------------------------------------changing--------------------------------------------
-
-drop function if exists add_buyer(Surname_ varchar, Name_ varchar, Patronymic_ varchar, reliability_factor_ int);
-create or replace function add_buyer(Surname_ varchar, Name_ varchar, Patronymic_ varchar, reliability_factor_ int)
-returns void as
-    $$
-        BEGIN
-            insert into people (surname, name, patronymic) values (Surname_, Name_, Patronymic_);
-            insert into buyers (buyerId, reliability_factor) values ((select max(personId) from people group by personId), reliability_factor_);
-        end;
+            return id;
+        end
     $$ LANGUAGE plpgsql;
 
-drop function if exists add_owner(Surname_ varchar, Name_ varchar, Patronymic_ varchar);
-create or replace function add_owner(Surname_ varchar, Name_ varchar, Patronymic_ varchar, personal_counter_ int)
-returns void as
-    $$
-        BEGIN
-            insert into people (surname, name, patronymic) values (Surname_, Name_, Patronymic_);
-            insert into owners(ownerId, personal_counter) values ((select max(personId) from people group by personId), personal_counter_);
-        end;
-    $$ LANGUAGE plpgsql;
-
-drop function if exists add_agent(Surname_ varchar, Name_ varchar, Patronymic_ varchar, work_stage_ int);
-create or replace function add_agent(Surname_ varchar, Name_ varchar, Patronymic_ varchar, work_stage_ int)
+drop function if exists add_buyer(Surname_ varchar, Name_ varchar, Patronymic_ varchar, telephone_number_ varchar, passport_data_ varchar,reliability_factor_ int);
+create or replace function add_buyer(Surname_ varchar, Name_ varchar, Patronymic_ varchar, telephone_number_ varchar, passport_data_ varchar, reliability_factor_ int)
 returns varchar as
     $$
     declare
     id int;
-    max_id int;
+    buyer_id int;
         BEGIN
-            id = 0;
-            max_id = 0;
-            id = (select personId from people where Surname_ = surname and Name_= Name and  Patronymic_ = Patronymic);
-            if (id != 0) then
-                if(id in (select agentId from agents)) then
-                    update Agents set work_stage=work_stage_ where agentId=id;
-                    return 'Агент уже в БД. Данные изменены';
-                else
-                    insert into Agents (agentId, work_stage) values (id, work_stage_);
-                end if;
+            id = add_people(Surname_,Name_, Patronymic_, telephone_number_, passport_data_);
+            buyer_id = 0;
+            buyer_id = (select buyerid from buyers where buyerid = id);
+            if (buyer_id != 0) then
+                update buyers set reliability_factor=reliability_factor_ where buyerId=id;
+                return 'Клиент уже в БД. Данные изменены';
             else
-                insert into People values (max_id, Surname_, Name_, Patronymic_);
-                max_id = (select max(personId) from people group by personId limit 1);
-                insert into Agents (agentId, work_stage) values (max_id, work_stage_);
+                insert into buyers (buyerId, reliability_factor) values (id, reliability_factor_);
+            end if;
+            return 'Клиент добавлен';
+        end
+    $$ LANGUAGE plpgsql;
+
+drop function if exists add_owner(Surname_ varchar, Name_ varchar, Patronymic_ varchar, telephone_number_ varchar, passport_data_ varchar);
+create or replace function add_owner(Surname_ varchar, Name_ varchar, Patronymic_ varchar, telephone_number_ varchar, passport_data_ varchar)
+returns varchar as
+    $$
+    declare
+    id int;
+    owner_id int;
+        BEGIN
+            id = add_people(Surname_,Name_, Patronymic_, telephone_number_, passport_data_);
+            owner_id = 0;
+            owner_id = (select ownerId from owners where ownerId = id);
+            if (owner_id != 0) then
+                update owners set personal_counter = personal_counter + 1 where ownerId = id;
+                return 'Владелец уже в БД. Данные изменены';
+            else
+                insert into owners (ownerId, personal_counter) values (id, 1);
+            end if;
+            return 'Владелец добавлен';
+        end
+    $$ LANGUAGE plpgsql;
+
+drop function if exists add_agent(Surname_ varchar, Name_ varchar, Patronymic_ varchar, telephone_number_ varchar, passport_data_ varchar, work_stage_ int);
+create or replace function add_agent(Surname_ varchar, Name_ varchar, Patronymic_ varchar, telephone_number_ varchar, passport_data_ varchar, work_stage_ int)
+returns varchar as
+    $$
+    declare
+    id int;
+    agent_id int;
+        BEGIN
+            id = add_people(Surname_,Name_, Patronymic_, telephone_number_, passport_data_);
+            agent_id = 0;
+            agent_id = (select agentId from agents where agentId = id);
+            if (agent_id != 0) then
+                update Agents set work_stage=work_stage_ where agentId=id;
+                return 'Агент уже в БД. Данные изменены';
+            else
+                insert into Agents (agentId, work_stage) values (id, work_stage_);
             end if;
             return 'Агент добавлен';
         end
     $$ LANGUAGE plpgsql;
+--select max(personId) from people group by personId;-- limit 1;
 
-drop function if exists add_object(Surname_ varchar, Name_ varchar, Patronymic_ varchar, work_stage_ int);
-create or replace function add_object(Surname_ varchar, Name_ varchar, Patronymic_ varchar, work_stage_ int)
+-------------------------------------------------------------objects--
+drop function if exists add_address(district_ varchar, street_ varchar);
+create or replace function add_address(district_ varchar, street_ varchar)
 returns void as
     $$
         BEGIN
-            insert into People (surname, name, patronymic) values (Surname_, Name_, Patronymic_);
-            insert into Agents (agentId, work_stage) values ((select max(personId) from people group by personId), work_stage_);
+            if (select street from street_list where district_=district and street_=street) is null then
+                insert into street_list (district, street) values (district_, street_);
+            end if;
         end;
     $$ LANGUAGE plpgsql;
 
+drop function if exists add_building(district_ varchar, street_ varchar, build_num_ int, floors_amount_ int);
+create or replace function add_building(district_ varchar, street_ varchar, build_num_ int, floors_amount_ int)
+returns int as
+    $$
+    declare
+    id int;
+        BEGIN
+             execute add_address(district_, street_);
+             id = 0;
+             id = (select buildingId from Buildings where district_=district and street_=street
+                                                    and build_num_ = build_number);
+             if (id != 0) then
+                    update Buildings set build_number = build_num_, district = district_ , street=street_,
+                                          floors_amount=floors_amount_
+                    where id = buildingId;
+             else
+                  insert into Buildings (build_number, district , street, floors_amount)
+                        values (build_num_, district_ ,street_, floors_amount_);
+             end if;
+            return id;
+            end;
+    $$ LANGUAGE plpgsql;
 
+drop function if exists add_object(district_ varchar, street_ varchar, build_num_ int,
+floors_amount_ int, ownerId_ int, agentId_ int, obj_type_ varchar, price_ int, area_ int,
+floor_ int, amonut_of_rooms_ int,  object_num_ int, additional_description_ varchar
+);
+create or replace function add_object(district_ varchar, street_ varchar, build_num_ int,
+floors_amount_ int, ownerId_ int, agentId_ int, obj_type_ varchar, price_ int, area_ int,
+floor_ int, amonut_of_rooms_ int,  object_num_ int, additional_description_ varchar
+)
+returns varchar as
+    $$
+    declare
+        build_id int;
+        BEGIN
+            build_id = add_building(district_, street_, build_num_,floors_amount_);
+             if object_num_ in (select object_num from object where buildingId = build_id) then
+                 return 'Объект уже существует';
+             else
+                 insert into object (buildingId, agentId, ownerId, obj_type, price, area,
+                                     floor, amonut_of_rooms, object_num, additional_description)
+                 values (build_id, agentId_, ownerId_, obj_type_, price_,  area_,
+                                     floor_, amonut_of_rooms_, object_num_, additional_description_);
+             end if;
+            --getID_people
+        return 'Объект добавлен';
+        end;
+    $$ LANGUAGE plpgsql;
+
+drop function if exists add_deal(objectId_ int, clientId int, deal_type_ varchar);
+create or replace function add_deal(objectId_ int, clientId_ int, deal_type_ varchar)
+returns varchar as
+    $$
+        BEGIN
+            insert into deal (agentId, objectId, buyerId, deal_type)
+            values ((select Agents.agentID from Agents, object where Agents.agentId = object.agentId and object.objectId = objectId_),
+                    objectId_, clientId_, deal_type_);
+        return 'Сделка добавлена';--. Id: ' + (select dealId from deal where objectId = objectId_);
+        end
+    $$ LANGUAGE plpgsql;
 
 -----------------------------------selects---------------------------------------------
 drop function if exists select_owners_objects(Owner_Surname_ varchar, Owner_Name_ varchar, Owner_Patronymic_ varchar);
@@ -438,5 +510,55 @@ returns setof people AS $$
         where buyerId = (select buyerId from buyers, telephone_book
         where Telephone_book.personId = buyers.buyerId
             and telephone_number = Client_Telephone);
+    end;
+    $$ LANGUAGE plpgsql;
+
+-----------------------------------deleting---------------------------------------------
+drop function if exists delete_agent(People_Surname_ varchar, People_Name_ varchar, People_Patronymic_ varchar);
+create or replace function delete_agent(People_Surname_ varchar, People_Name_ varchar, People_Patronymic_ varchar)
+returns varchar AS $$
+    BEGIN
+        delete from agents where agentId =
+                                 (select personId from people
+                                 where people.surname = People_Surname_
+                                   and people.name = People_Name_
+                                   and people.patronymic = People_Patronymic_);
+        return 'Человек вычеркнут из списка сотрудников';
+    end;
+    $$ LANGUAGE plpgsql;
+
+drop function if exists delete_owner(People_Surname_ varchar, People_Name_ varchar, People_Patronymic_ varchar);
+create or replace function delete_owner(People_Surname_ varchar, People_Name_ varchar, People_Patronymic_ varchar)
+returns varchar AS $$
+    BEGIN
+        delete from owners where ownerId =
+                                 (select personId from people
+                                 where people.surname = People_Surname_
+                                   and people.name = People_Name_
+                                   and people.patronymic = People_Patronymic_);
+        return 'Человек вычеркнут из списка владельцев';
+    end;
+    $$ LANGUAGE plpgsql;
+
+drop function if exists delete_client(People_Surname_ varchar, People_Name_ varchar, People_Patronymic_ varchar);
+create or replace function delete_client(People_Surname_ varchar, People_Name_ varchar, People_Patronymic_ varchar)
+returns varchar AS $$
+    BEGIN
+        delete from buyers where buyerId =
+                                 (select personId from people
+                                 where people.surname = People_Surname_
+                                   and people.name = People_Name_
+                                   and people.patronymic = People_Patronymic_);
+        return 'Человек вычеркнут из списка клиентов';
+    end;
+    $$ LANGUAGE plpgsql;
+
+drop function if exists delete_person(People_Surname_ varchar, People_Name_ varchar, People_Patronymic_ varchar);
+create or replace function delete_person(People_Surname_ varchar, People_Name_ varchar, People_Patronymic_ varchar)
+returns varchar AS $$
+    BEGIN
+        --delete from personal_data where
+        delete from people where surname = People_Surname_ and name = People_Name_ and patronymic = People_Patronymic_;
+        return 'Человек удален из базы данных';
     end;
     $$ LANGUAGE plpgsql;
