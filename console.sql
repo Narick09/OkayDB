@@ -92,7 +92,7 @@ create table Object(
     additional_description varchar(10000),--доп информация
     primary key (objectId),
     foreign key (agentId) references Agents(agentId),
-    foreign key (ownerId) references Owners(ownerId),
+    foreign key (ownerId) references Owners(ownerId) on delete cascade,
     foreign key (buildingId) references Buildings(buildingId)
 );
 
@@ -559,9 +559,11 @@ returns varchar AS $$
     declare
     id int;
     BEGIN
-    	--id = ...
-        --delete from personal_data where personId = 
+    	id = (select personId from people where People_Surname_ = surname and People_Name_ = name and People_Patronymic_ = patronymic);
+        delete from personal_data where personId = id;
+    	delete from telephone_book where personId = id;
         delete from people where surname = People_Surname_ and name = People_Name_ and patronymic = People_Patronymic_;
         return 'Человек удален из базы данных';
     end;
     $$ LANGUAGE plpgsql;
+
