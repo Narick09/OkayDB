@@ -17,3 +17,5 @@
 Для запуска необходим модуль *модуль* для  ЯП питон.
 Также необходима БД PostgreSQL. Для администратирования можно использовать программу pgAdmin. 
 Для разработки на питоне файлов использовалась IDE PyCharm Community Edition. 
+
+https://app.diagrams.net/#G11Fg8HQGvTi9Tka2pWtTVkAX2UJFCsaZJ 
