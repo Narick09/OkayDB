@@ -556,8 +556,11 @@ returns varchar AS $$
 drop function if exists delete_person(People_Surname_ varchar, People_Name_ varchar, People_Patronymic_ varchar);
 create or replace function delete_person(People_Surname_ varchar, People_Name_ varchar, People_Patronymic_ varchar)
 returns varchar AS $$
+    declare
+    id int;
     BEGIN
-        --delete from personal_data where
+    	--id = ...
+        --delete from personal_data where personId = 
         delete from people where surname = People_Surname_ and name = People_Name_ and patronymic = People_Patronymic_;
         return 'Человек удален из базы данных';
     end;
